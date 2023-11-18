@@ -196,6 +196,12 @@ async function run() {
       res.send(result)
     })
 
+    app.post("/menu", verifyToken, verifyAdmin, async (req, res) => {
+      const menu = req.body;
+      const result = await menuCollectopn.insertOne(menu);
+      res.send(result)
+    })
+
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // await client.close();
