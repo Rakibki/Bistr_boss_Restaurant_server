@@ -35,6 +35,26 @@ async function run() {
     const reviewsCollection = database.collection("reviewsCollection");
     const cardCollection = database.collection("cardCollection");
     const usersCollection = database.collection("usersCollection");
+    const paymentsCollection = database.collection("paymentsCollection");
+
+    // payment
+    app.post("/create-payment-intent", async (req, res) => {
+      const {price} = req.body;
+      const amount = parseInt(price * 100)
+
+      console.log(amount);
+      
+        const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+    
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+    
 
     // medelweres
     const verifyToken = (req, res, next) => {
@@ -61,6 +81,15 @@ async function run() {
       }
       next()
     }
+
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+      const users =  await usersCollection.estimatedDocumentCount()
+      const menus =  await menuCollectopn.estimatedDocumentCount()
+      // pore korte hobe;
+      const oders = 101;
+      const revenue = 1203;
+      res.send({users,menus, oders, revenue})
+    })
 
 
     // **********Menu Related api start***********
@@ -203,22 +232,22 @@ async function run() {
       res.send(result)
     })
 
-    // payment
-    app.post("/create-payment-intent", async (req, res) => {
-      const {price} = req.body;
-      const amount = parseInt(price * 100)
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount,
-        currency: "usd",
-        payment_method_types: ["card"]
-      });
-    
-      res.send({
-        clientSecret: paymentIntent.client_secret,
-      });
-    });
-    
+    app.post("/payment", async (req, res)=>{
+      const paymentData = req.body;
+      const query = {_id: { $in: paymentData.cardIds.map((item) => new ObjectId(item) )}}
+      const cardDeleteResult = await cardCollection.deleteMany(query)
+      const paymentREsult = await paymentsCollection.insertOne(paymentData)
+      res.send({paymentREsult, cardDeleteResult})
+    })
+ 
+    app.get("/paymentHistory/:email", async(req, res) => {
+      const email = req.params.email;
+      const filter = {email: email};
+      const result = await paymentsCollection.find(filter).toArray();
+      res.send(result)
+    })
+
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
