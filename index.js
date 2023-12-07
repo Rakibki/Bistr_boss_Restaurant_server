@@ -5,7 +5,14 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const stripe = require("stripe")(process.env.STRIPE_SECRET_key);
+const formData = require('form-data');
+const Mailgun = require('mailgun.js');
+const mailgun = new Mailgun(formData);
 
+const mg = mailgun.client({
+	username: 'api',
+	key: process.env.BISTRO_BOSS_MAIN_GUN_API_KEY,
+});
 
 const app = express()
 
@@ -86,8 +93,8 @@ async function run() {
       const users =  await usersCollection.estimatedDocumentCount()
       const menus =  await menuCollectopn.estimatedDocumentCount()
       // pore korte hobe;
-      const oders = 101;
-      const revenue = 1203;
+      const oders = await paymentsCollection.estimatedDocumentCount();
+      const revenue = (await paymentsCollection.find().toArray()).reduce((acc, curr) => acc + curr.price ,0);
       res.send({users,menus, oders, revenue})
     })
 
@@ -239,6 +246,17 @@ async function run() {
       const cardDeleteResult = await cardCollection.deleteMany(query)
       const paymentREsult = await paymentsCollection.insertOne(paymentData)
       res.send({paymentREsult, cardDeleteResult})
+
+    mg.messages
+	  .create(process.env.BISTRO_BOSS_MAIN_GUN_SENDING_DOIMINGS, {
+		from: "Mailgun Sandbox <postmaster@sandboxeab625fcced54174b0eb7d3a6412cf71.mailgun.org>",
+		to: ["rbepari404@gmail.com"],
+		subject: "bistro boss oder confirm",
+		text: "Testing some Mailgun awesomness!",
+	})
+	.then(msg => console.log(msg)) // logs response data
+	.catch(err => console.log(err)); 
+
     })
  
     app.get("/paymentHistory/:email", async(req, res) => {
