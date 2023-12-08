@@ -101,7 +101,20 @@ async function run() {
 
     // **********Menu Related api start***********
     app.get("/menu", async(req, res) => {
-      const result = await menuCollectopn.find().toArray();
+      const sortTextt = req.query.sort
+      const minPrice = parseInt(req.query.minPrice);
+      const maxPrice = parseInt(req.query.maxPrice);
+      const serch = req.query.serch
+      console.log(serch);
+
+      let filter = {};
+      if(minPrice && maxPrice) {
+        filter = {
+          price: {$gte: maxPrice, $lte: minPrice},
+          title: {$regex: serch}
+        }
+      }
+      const result = await menuCollectopn.find(filter).sort({price: sortTextt==="HighToLow" ? -1 : 1}).toArray();
       res.send(result)
     })
     // **********Menu Related api end***********
